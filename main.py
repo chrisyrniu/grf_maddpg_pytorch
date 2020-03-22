@@ -3,6 +3,7 @@ import torch
 import time
 import os
 import numpy as np
+import gym
 from gym.spaces import Box, Discrete
 from pathlib import Path
 from torch.autograd import Variable
@@ -12,6 +13,7 @@ from utils.buffer import ReplayBuffer
 from utils.env_wrappers import SubprocVecEnv, DummyVecEnv
 from algorithms.maddpg import MADDPG
 
+gym.logger.set_level(40)
 
 USE_CUDA = False
 def make_parallel_env(env_id, n_rollout_threads, seed, num_controlled_lagents, num_controlled_ragents, reward_type):
@@ -111,7 +113,7 @@ def run(config):
                 maddpg.prep_rollouts(device='cpu')
         ep_rews = replay_buffer.get_average_rewards(
             config.episode_length * config.n_rollout_threads)
-        if ep_i == 2000:
+        if ep_i%500 == 0:
             print(ep_rews)
         for a_i, a_ep_rew in enumerate(ep_rews):
             logger.add_scalar('agent%i/mean_episode_rewards' % a_i, a_ep_rew, ep_i)
