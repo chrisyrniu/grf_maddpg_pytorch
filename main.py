@@ -77,8 +77,6 @@ def run(config):
         maddpg.scale_noise(config.final_noise_scale + (config.init_noise_scale - config.final_noise_scale) * explr_pct_remaining)
         maddpg.reset_noise()
 
-        checkpoint_rewards = np.zeros((config.n_rollout_threads, config.n_controlled_lagents+config.n_controlled_ragents))
-
         for et_i in range(config.episode_length):
             # rearrange observations to be per agent, and convert to torch Variable
             torch_obs = [Variable(torch.Tensor(np.vstack(obs[:, i])),
@@ -91,10 +89,7 @@ def run(config):
             # rearrange actions to be per environment
             actions = [[ac[i] for ac in agent_actions] for i in range(config.n_rollout_threads)]
             next_obs, rewards, dones, infos = env.step(actions)
-            if config.reward_type == 'checkpoints':
-                checkpoint_rewards = env.reward(checkpoint_rewards)
-                # print(checkpoint_rewards)
-                rewards = checkpoint_rewards
+            print(rewards)
             replay_buffer.push(obs, agent_actions, rewards, next_obs, dones)
             obs = next_obs
             t += config.n_rollout_threads
