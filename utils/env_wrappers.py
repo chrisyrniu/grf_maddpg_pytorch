@@ -22,9 +22,6 @@ def worker(remote, parent_remote, env_fn_wrapper):
         elif cmd == 'reset_task':
             ob = env.reset_task()
             remote.send(ob)
-        elif cmd == 'reward':
-            rew = env.reward(data)
-            remote.send(rew)
         elif cmd == 'close':
             remote.close()
             break
@@ -81,22 +78,7 @@ class SubprocVecEnv(VecEnv):
     def reset_task(self):
         for remote in self.remotes:
             remote.send(('reset_task', None))
-        return np.stack([remote.recv() for remote in self.remotes])
-
-    def reward_async(self, rewards):
-        for remote, reward in zip(self.remotes, rewards):
-            remote.send(('reward', reward))
-        self.waiting = True
-
-    def reward_wait(self):
-        results = [remote.recv() for remote in self.remotes]
-        self.waiting = False
-        rews = results
-        return np.stack(rews)     
-
-    def reward(self, rewards):
-        self.reward_async(rewards)
-        return self.reward_wait()       
+        return np.stack([remote.recv() for remote in self.remotes])   
 
     def close(self):
         if self.closed:
@@ -138,11 +120,7 @@ class DummyVecEnv(VecEnv):
 
     def reset(self):        
         results = [env.reset() for env in self.envs]
-        return np.array(results)
-
-    def reward(self, rewards):
-        results = [env.reward(rewards[i,:]) for i, env in enumerate(self.envs)]
-        return np.array(results)        
+        return np.array(results)       
 
     def close(self):
         return
