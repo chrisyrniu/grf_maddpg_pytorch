@@ -69,6 +69,3 @@ class MultiAgentEnv(gym.Env):
 
 		return next_obs, rewards, dones, infos
 
-	def reward(self, reward):
-		return self.env.reward(reward)
-
