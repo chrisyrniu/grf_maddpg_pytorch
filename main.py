@@ -3,7 +3,6 @@ import torch
 import time
 import os
 import numpy as np
-import gym
 from gym.spaces import Box, Discrete
 from pathlib import Path
 from torch.autograd import Variable
@@ -12,10 +11,10 @@ from utils.multi_agent_env import MultiAgentEnv
 from utils.buffer import ReplayBuffer
 from utils.env_wrappers import SubprocVecEnv, DummyVecEnv
 from algorithms.maddpg import MADDPG
+import gym
 
 gym.logger.set_level(40)
 
-USE_CUDA = False
 def make_parallel_env(env_id, n_rollout_threads, seed, num_controlled_lagents, num_controlled_ragents, reward_type):
     def get_env_fn(rank):
         def init_env():
@@ -30,9 +29,10 @@ def make_parallel_env(env_id, n_rollout_threads, seed, num_controlled_lagents, n
         return SubprocVecEnv([get_env_fn(i) for i in range(n_rollout_threads)])
 
 def run(config):
+    USE_CUDA = False
     if config.gpu:
         if torch.cuda.is_available():
-            USE_CUDA == True
+            USE_CUDA = True
     model_dir = Path('./models') / config.env_id / config.model_name
     if not model_dir.exists():
         curr_run = 'run1'
@@ -89,7 +89,6 @@ def run(config):
             # rearrange actions to be per environment
             actions = [[ac[i] for ac in agent_actions] for i in range(config.n_rollout_threads)]
             next_obs, rewards, dones, infos = env.step(actions)
-            print(rewards)
             replay_buffer.push(obs, agent_actions, rewards, next_obs, dones)
             obs = next_obs
             t += config.n_rollout_threads
@@ -109,6 +108,7 @@ def run(config):
         ep_rews = replay_buffer.get_average_rewards(
             config.episode_length * config.n_rollout_threads)
         if ep_i%500 == 0:
+            print(ep_i)
             print(ep_rews)
         for a_i, a_ep_rew in enumerate(ep_rews):
             logger.add_scalar('agent%i/mean_episode_rewards' % a_i, a_ep_rew, ep_i)
@@ -138,13 +138,13 @@ if __name__ == '__main__':
     parser.add_argument("--n_controlled_lagents", default=2, type=int)
     parser.add_argument("--n_controlled_ragents", default=0, type=int)
     parser.add_argument("--buffer_length", default=int(1e6), type=int)
-    parser.add_argument("--n_episodes", default=500000, type=int)
+    parser.add_argument("--n_episodes", default=1000000, type=int)
     parser.add_argument("--episode_length", default=25, type=int)
     parser.add_argument("--steps_per_update", default=100, type=int)
     parser.add_argument("--batch_size",
                         default=1024, type=int,
                         help="Batch size for model training")
-    parser.add_argument("--n_exploration_eps", default=500000, type=int)
+    parser.add_argument("--n_exploration_eps", default=1000000, type=int)
     parser.add_argument("--init_noise_scale", default=0.3, type=float)
     parser.add_argument("--final_noise_scale", default=0.0, type=float)
     parser.add_argument("--save_interval", default=1000, type=int)
