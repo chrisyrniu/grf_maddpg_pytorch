@@ -15,10 +15,10 @@ import gym
 
 gym.logger.set_level(40)
 
-def make_parallel_env(env_id, n_rollout_threads, seed, num_controlled_lagents, num_controlled_ragents, reward_type):
+def make_parallel_env(env_id, n_rollout_threads, seed, num_controlled_lagents, num_controlled_ragents, reward_type, render):
     def get_env_fn(rank):
         def init_env():
-            env = MultiAgentEnv(env_id, num_controlled_lagents, num_controlled_ragents, reward_type)
+            env = MultiAgentEnv(env_id, num_controlled_lagents, num_controlled_ragents, reward_type, render)
             env.seed(seed + rank * 1000)
             np.random.seed(seed + rank * 1000)
             return env
@@ -54,7 +54,7 @@ def run(config):
     if not USE_CUDA:
         torch.set_num_threads(config.n_training_threads)
     env = make_parallel_env(config.env_id, config.n_rollout_threads, config.seed,
-                            config.n_controlled_lagents, config.n_controlled_ragents, config.reward_type)
+                            config.n_controlled_lagents, config.n_controlled_ragents, config.reward_type, config.render)
     maddpg = MADDPG.init_from_env(env, agent_alg=config.agent_alg,
                                   adversary_alg=config.adversary_alg,
                                   tau=config.tau,
@@ -151,6 +151,7 @@ if __name__ == '__main__':
     parser.add_argument("--hidden_dim", default=64, type=int)
     parser.add_argument("--lr", default=0.01, type=float)
     parser.add_argument("--tau", default=0.01, type=float)
+    parser.add_argument("--render", default=False, type=bool)
     parser.add_argument("--gpu", default=False, action="store_true")
     parser.add_argument("--agent_alg",
                         default="MADDPG", type=str,

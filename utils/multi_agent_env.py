@@ -4,7 +4,7 @@ import numpy as np
 
 class MultiAgentEnv(gym.Env):
 
-	def __init__(self, scenario, num_controlled_lagents, num_controlled_ragents, reward_type):
+	def __init__(self, scenario, num_controlled_lagents, num_controlled_ragents, reward_type, render):
 		self.env = grf_env.create_environment(
 			env_name=scenario,
 			stacked=False,
@@ -12,7 +12,7 @@ class MultiAgentEnv(gym.Env):
 			rewards=reward_type,
 			write_goal_dumps=False,
 			write_full_episode_dumps=False,
-			render=False,
+			render=render,
 			dump_frequency=0,
 			logdir='/tmp/maddpg_test',
 			extra_players=None,
