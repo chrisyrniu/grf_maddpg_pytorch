@@ -5,7 +5,9 @@ from pathlib import Path
 from torch.autograd import Variable
 from algorithms.maddpg import MADDPG
 from utils.multi_agent_env import MultiAgentEnv
+import gym
 
+gym.logger.set_level(40)
 
 def run(config):
     model_path = (Path('./models') / config.env_id / config.model_name /
@@ -49,13 +51,13 @@ if __name__ == '__main__':
                              "rather than final policy")
     parser.add_argument("--n_episodes", default=200, type=int)
     parser.add_argument("--episode_length", default=200, type=int)
-    parser.add_argument("--render", default=False, type=bool)
+    parser.add_argument("--render", action="store_true")
     parser.add_argument("--n_controlled_lagents", default=3, type=int)
     parser.add_argument("--n_controlled_ragents", default=0, type=int)
     parser.add_argument("--reward_type",
                         default="scoring", type=str,
                         choices=['scoring', 'checkpoints'])
-
+    
     config = parser.parse_args()
 
     run(config)

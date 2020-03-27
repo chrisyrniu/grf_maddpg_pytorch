@@ -151,8 +151,8 @@ if __name__ == '__main__':
     parser.add_argument("--hidden_dim", default=64, type=int)
     parser.add_argument("--lr", default=0.01, type=float)
     parser.add_argument("--tau", default=0.01, type=float)
-    parser.add_argument("--render", default=False, type=bool)
-    parser.add_argument("--gpu", default=False, action="store_true")
+    parser.add_argument("--render", action="store_true")
+    parser.add_argument("--gpu", action="store_true")
     parser.add_argument("--agent_alg",
                         default="MADDPG", type=str,
                         choices=['MADDPG', 'DDPG'])
