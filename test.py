@@ -22,6 +22,8 @@ def run(config):
     env = MultiAgentEnv(config.env_id, config.n_controlled_lagents, config.n_controlled_ragents, config.reward_type, config.render)
     maddpg.prep_rollouts(device='cpu')
 
+    goal_diff = 0
+
     for ep_i in range(config.n_episodes):
         print("Episode %i of %i" % (ep_i + 1, config.n_episodes))
         obs = env.reset()
@@ -35,8 +37,12 @@ def run(config):
             # convert actions to numpy arrays
             actions = [ac.data.numpy().flatten() for ac in torch_actions]
             obs, rewards, dones, infos = env.step(actions)
-            if dones[0]:
+            if all(dones):
+                goal_diff += np.sum(rewards) / (config.n_controlled_lagents + config.n_controlled_ragents)
+            if all(dones):
             	break
+    goal_diff /= config.n_episodes
+    print(goal_diff)
     env.close()
 
 

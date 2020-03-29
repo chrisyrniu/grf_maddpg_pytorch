@@ -81,7 +81,7 @@ def run(config):
             # rearrange observations to be per agent, and convert to torch Variable
             torch_obs = [Variable(torch.Tensor(np.vstack(obs[:, i])),
                                   requires_grad=False)
-                         for i in range(maddpg.nagents)]
+                         for i in range(maddpg.nagents)]         
             # get actions as torch Variables
             torch_agent_actions = maddpg.step(torch_obs, explore=True)
             # convert actions to numpy arrays
@@ -110,9 +110,13 @@ def run(config):
         if ep_i%500 == 0:
             print(ep_i)
             print(ep_rews)
+
+        global_ep_rews = 0
         for a_i, a_ep_rew in enumerate(ep_rews):
             # logger.add_scalar('agent%i/mean_episode_rewards' % a_i, a_ep_rew, ep_i)
-            logger.add_scalars('agent%i/mean_episode_rewards' % a_i, {'mean_rews': a_ep_rew}, ep_i)
+            logger.add_scalars('agent%i/rewards' % a_i, {'mean_episode_rewards': a_ep_rew}, ep_i)
+            global_ep_rews += a_ep_rew / (config.n_controlled_lagents + config.n_controlled_ragents)
+        logger.add_scalars('global', {'global_rewards': global_ep_rews}, ep_i)
 
         if ep_i % config.save_interval < config.n_rollout_threads:
             os.makedirs(run_dir / 'incremental', exist_ok=True)
