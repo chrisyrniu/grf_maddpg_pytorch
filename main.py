@@ -49,6 +49,8 @@ def run(config):
     os.makedirs(log_dir)
     logger = SummaryWriter(str(log_dir))
 
+    if config.seed == -1:
+        config.seed = np.random.randint(0,10000)
     torch.manual_seed(config.seed)
     np.random.seed(config.seed)
     if not USE_CUDA:
@@ -65,18 +67,30 @@ def run(config):
                                  [acsp.shape[0] if isinstance(acsp, Box) else acsp.n
                                   for acsp in env.action_space])
     t = 0
+    num_episodes = 0
     for ep_i in range(0, config.n_episodes, config.n_rollout_threads):
-        # print("Episodes %i-%i of %i" % (ep_i + 1,
-        #                                 ep_i + 1 + config.n_rollout_threads,
-        #                                 config.n_episodes))
-        obs = env.reset()
-        # obs.shape = (n_rollout_threads, nagent)(nobs), nobs differs per agent so not tensor
-        maddpg.prep_rollouts(device='cpu')
+        
 
+        if ep_i % (config.epoch_size * config.n_rollout_threads) == 0:
+            stat = dict()
+            stat['epoch'] = int(ep_i / (config.epoch_size * config.n_rollout_threads) + 1)
+        
+        obs = env.reset()
+        maddpg.prep_rollouts(device='cpu')
+        
         explr_pct_remaining = max(0, config.n_exploration_eps - ep_i) / config.n_exploration_eps
         maddpg.scale_noise(config.final_noise_scale + (config.init_noise_scale - config.final_noise_scale) * explr_pct_remaining)
         maddpg.reset_noise()
 
+        s = dict()
+        s['dones'] = [0 for i in range(config.n_rollout_threads)]
+        s['num_episodes'] = [0 for i in range(config.n_rollout_threads)]
+        s['reward'] = [0 for i in range(config.n_rollout_threads)]
+        s['success'] = [0 for i in range(config.n_rollout_threads)]
+        s['steps_taken'] = [0 for i in range(config.n_rollout_threads)]
+        s['reward_buffer'] = [0 for i in range(config.n_rollout_threads)]
+        s['steps_buffer'] = [0 for i in range(config.n_rollout_threads)]
+        
         for et_i in range(config.episode_length):
             # rearrange observations to be per agent, and convert to torch Variable
             torch_obs = [Variable(torch.Tensor(np.vstack(obs[:, i])),
@@ -105,15 +119,30 @@ def run(config):
                         maddpg.update(sample, a_i, logger=logger)
                     maddpg.update_all_targets()
                 maddpg.prep_rollouts(device='cpu')
+                
+            for i in range(config.n_rollout_threads):
+                s['reward'][i] += np.mean(rewards[i])
+                s['steps_taken'][i] += 1
+                if dones[i][0] == True:
+                    s['dones'][i] += 1
+                    s['num_episodes'][i] += 1
+                    s['reward_buffer'][i] = s['reward'][i]
+                    s['steps_buffer'][i] = s['steps_taken'][i]
+                    if infos[i]['score_reward'] == 1:
+                        s['success'][i] += 1
+                if et_i == config.episode_length-1:
+                    if dones[i][0] == False:
+                        if s['dones'][i] > 0:
+                            s['reward'][i] = s['reward_buffer'][i]
+                            s['steps_taken'][i] = s['steps_buffer'][i]
+                        else:
+                            s['num_episodes'][i] += 1
+            
         ep_rews = replay_buffer.get_average_rewards(
             config.episode_length * config.n_rollout_threads)
-        if ep_i%500 == 0:
-            print(ep_i)
-            print(ep_rews)
 
         global_ep_rews = 0
         for a_i, a_ep_rew in enumerate(ep_rews):
-            # logger.add_scalar('agent%i/mean_episode_rewards' % a_i, a_ep_rew, ep_i)
             logger.add_scalars('agent%i/rewards' % a_i, {'mean_episode_rewards': a_ep_rew}, ep_i)
             global_ep_rews += a_ep_rew / (config.n_controlled_lagents + config.n_controlled_ragents)
         logger.add_scalars('global', {'global_rewards': global_ep_rews}, ep_i)
@@ -122,6 +151,26 @@ def run(config):
             os.makedirs(run_dir / 'incremental', exist_ok=True)
             maddpg.save(run_dir / 'incremental' / ('model_ep%i.pt' % (ep_i + 1)))
             maddpg.save(run_dir / 'model.pt')
+            
+        # An exact episode means a real episode in the game, rather than the episode in a training loop
+        # Mean (exact) episode data are only generated from complete exact episodes
+        # We calculate the mean (exact) episode data in each epoch
+        # (config.epoch_size * config.n_rollout_threads) means the number of training episodes an epoch includes
+        # The mean (exact) episode data are used for visualization and comparison
+        # Reward, Steps-Taken, Success
+        
+        stat['num_episodes'] = stat.get('num_episodes', 0) + np.sum(s['num_episodes'])
+        stat['reward'] = stat.get('reward', 0) + np.sum(s['reward'])
+        stat['success'] = stat.get('success', 0) + np.sum(s['success'])
+        stat['steps_taken'] = stat.get('steps_taken', 0) + np.sum(s['steps_taken'])
+        
+        if (ep_i+config.n_rollout_threads) % (config.epoch_size * config.n_rollout_threads) == 0:
+            num_episodes += stat['num_episodes']
+            print('Epoch {}'.format(stat['epoch']))
+            print('Episode: {}'.format(num_episodes))
+            print('Reward: {}'.format(stat['reward']/stat['num_episodes']))
+            print('Success: {:.2f}'.format(stat['success']/stat['num_episodes']))
+            print('Steps-Taken: {:.2f}'.format(stat['steps_taken']/stat['num_episodes']))
 
     maddpg.save(run_dir / 'model.pt')
     env.close()
@@ -136,13 +185,14 @@ if __name__ == '__main__':
                         help="Name of directory to store " +
                              "model/training contents")
     parser.add_argument("--seed",
-                        default=1, type=int,
+                        default=-1, type=int,
                         help="Random seed")
     parser.add_argument("--n_rollout_threads", default=1, type=int)
     parser.add_argument("--n_training_threads", default=6, type=int)
     parser.add_argument("--n_controlled_lagents", default=2, type=int)
     parser.add_argument("--n_controlled_ragents", default=0, type=int)
     parser.add_argument("--buffer_length", default=int(1e6), type=int)
+    parser.add_argument("--epoch_size", default=50, type=int)
     parser.add_argument("--n_episodes", default=1000000, type=int)
     parser.add_argument("--episode_length", default=200, type=int)
     parser.add_argument("--steps_per_update", default=100, type=int)
