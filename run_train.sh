@@ -11,7 +11,7 @@ python -u main.py \
   --buffer_length 1000000 \
   --n_episodes 200000 \
   --n_exploration_eps 45000 \
-  --epoch_size 5 \
+  --epoch_size 50 \
   --episode_length 100 \
   --steps_per_update 100 \
   --batch_size 1024 \
@@ -23,7 +23,7 @@ python -u main.py \
   --tau 0.005 \
   --agent_alg MADDPG \
   --adversary_alg MADDPG \
-  --reward_type checkpoints \
+  --reward_type scoring \
   | tee train.log
 
 #  --gpu \
