@@ -102,7 +102,6 @@ def parse_plot(files, term='Reward'):
 
         plt.plot(np.arange(len(coll[label])), mean_values, linewidth=1.5, label=label, color=colors_map[label])
         plt.fill_between(np.arange(len(coll[label])), min_values, max_values, color=colors.to_rgba(colors_map[label], alpha=0.2))
-
         # plt.plot(mean_episodes, mean_values, linewidth=1.5, label=label, color=colors_map[label])
         # plt.fill_between(mean_episodes, min_values, max_values, color=colors.to_rgba(colors_map[label], alpha=0.2))
 
