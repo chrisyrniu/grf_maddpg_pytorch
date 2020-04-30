@@ -16,7 +16,10 @@ MADDPG implementation in Google Research Football.
 
 ## Check Training Processing and Results
 * Use tensorboardx
-* Use plot_script.py
-`python plot_script.py saved figure1 Reward`
+* Use plot_script.py:
+
+`python plot_script.py saved/ name Reward`
+
+`python plot_script.py saved/ name Steps-Taken`
 
 
