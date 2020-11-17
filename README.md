@@ -8,19 +8,11 @@ MADDPG implementation in Google Research Football
 * PyTorch
 * Tensorboard and [tensorboardX](https://github.com/lanpa/tensorboardX)
 
-## Run Training
-`sh run_train.sh`
+## Example Command of Training
+`python initialize_AHIRL.py --expnum 0 --show --train --active_learning`
 
-## Run Testing
-`sh run_test.sh`
-
-## Check Training Process and Results
-* Use tensorboardx
-* Use plot_script.py and saved log file:
-
-`python plot_script.py saved/ name Reward`
-
-`python plot_script.py saved/ name Steps-Taken`
+## Example Command of Training
+`python initialize_AHIRL.py --expnum 0 --show --test`
 
 ## Acknowledgement
 This repository is revised from [MADDPG-PyTorch](https://github.com/shariqiqbal2810/maddpg-pytorch)
